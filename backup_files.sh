@@ -15,11 +15,13 @@ fullBackupDayNumber=1
 minBackupPathLength=11 # We do not want to delete files from filesystem root
 minBackupMaxWeeksAge=1 # It does not make sense to set this less than 1 week
 
-fullBackupSuffix="full_backup.tar.bz2"
+fullBackupSuffix="full_backup.tar"
 fullBackupLogSuffix="full_backup.log"
 
-incrementalBackupSuffix="incremental_backup.tar.bz2"
+incrementalBackupSuffix="incremental_backup.tar"
 incrementalBackupLogSuffix="incremental_backup.log"
+
+compressor="lbzip2"
 
 # Internal variables, do not modify.
 currentDirectory="$( cd $( dirname "$0" ); pwd; cd - >/dev/null )"
@@ -28,8 +30,14 @@ backupExcludeFilePath="${currentDirectory}/${backupExcludeFile}"
 keepBackupWeeks="$1"
 whatToBackupPath=$( realpath "$2" )
 directoryName="$3"
-
 backupDirectoryPath="${backupDirectoryMount}/tar${whatToBackupPath}"
+
+compressorExtension=""
+compressorCommand=""
+if [ "${compressor}" = "lbzip2" ]; then
+    compressorExtension=".bz2"
+    compressorCommand="lbzip2"
+fi
 
 #### Functions ####
 
@@ -154,7 +162,7 @@ incrementalBackup() {
     createBackup "${_what}" "${_where}" "${_backupName}" "${_backupLogName}" "${_lastBackupDate}"
     _resultCode=$?
 
-    if [[ ${_resultCode} = 0 ]]; then 
+    if [[ ${_resultCode} = 0 ]]; then
         mv "${_backupMarkerPath}.tmp" "${_backupMarkerPath}"
     else
         rm "${_backupMarkerPath}.tmp"
@@ -190,7 +198,8 @@ createBackup() {
         eval ${command}
     fi
 
-    command="nice -n 19 tar -cpv -I lbzip2 --absolute-names --ignore-failed-read --exclude-tag-all=\"${backupExcludeTag}\" -f \"${_backupFilePath}\" -X \"${backupExcludeFilePath}\" --files-from=\"${_backupListPath}\" > \"${_backupLogPath}\" 2>&1"
+    show "Creating backup archive \"${_backupFilePath}\"..."
+    command="nice -n 19 tar -cpv --absolute-names --ignore-failed-read --exclude-tag-all=\"${backupExcludeTag}\" -f \"${_backupFilePath}\" -X \"${backupExcludeFilePath}\" --files-from=\"${_backupListPath}\" > \"${_backupLogPath}\" 2>&1"
     eval ${command}
     _tarResult=$?
     rm "${_backupListPath}"
@@ -199,6 +208,7 @@ createBackup() {
         show "Failed to create backup archive \"${_backupFilePath}\""
         mv "${_backupFilePath}" "${_backupFilePath}.error" 2>/dev/null
         mv "${_backupLogPath}" "${_backupLogPath}.error" 2>/dev/null
+
         return 2
     fi
 
@@ -207,10 +217,16 @@ createBackup() {
         show "Empty backup created, removing \"${_backupFilePath}\""
         rm "${_backupFilePath}"
         rm "${_backupLogPath}"
+
         return 1
     fi
 
-    lbzip2 "${_backupLogPath}"
+    if [ ! -z "${compressorCommand}" ]; then
+        "${compressorCommand}" "${_backupLogPath}"
+        "${compressorCommand}" "${_backupFilePath}"
+        _backupFilePath="${_backupFilePath}${compressorExtension}"
+    fi
+
     _backupSize=$( du -h "${_backupFilePath}" |awk '{print $1}' )
     show "Created '${_backupFilePath}', size '${_backupSize}'."
 
