@@ -28,8 +28,9 @@ currentDirectory="$( cd $( dirname "$0" ); pwd; cd - >/dev/null )"
 currentFileName="$( basename "$0" )"
 backupExcludeFilePath="${currentDirectory}/${backupExcludeFile}"
 keepBackupWeeks="$1"
-whatToBackupPath=$( realpath "$2" )
+whatToBackupPath=$( realpath "$2" 2>/dev/null)
 directoryName="$3"
+compressArchives="$4"
 backupDirectoryPath="${backupDirectoryMount}/tar${whatToBackupPath}"
 
 compressorExtension=""
@@ -64,11 +65,12 @@ usage() {
     show "${_message}"
     show "\nDescription:"
     show "  This script backs up data in given directory and cleans up old backup files.\n"
-    show "Usage:\n  ${currentFileName} <max_days_to_keep_backups> <what_to_backup_directory>"
+    show "Usage:\n  ${currentFileName} <max_weeks_to_keep_backups> <what_to_backup_directory> [<what_dir_to_backup_exactly>] [<compress_archives>]"
     show "  Options:"
     show "    max_weeks_to_keep_backups\t- Number of weeks, can't be less than '${minBackupMaxWeeksAge}'"
     show "    what_to_backup_directory\t- Full path to directory containing data folders"
-    shoe "    what_dir_to_backup_exactly\t- Exact directory name inside what_to_backup_directory folder\n"
+    show "    what_dir_to_backup_exactly\t- Exact directory name inside what_to_backup_directory folder"
+    show "    compress_archives\t\t- Allowed value 'compress', will compress backup archives.\n"
     quit 1
 }
 
@@ -223,8 +225,10 @@ createBackup() {
 
     if [ ! -z "${compressorCommand}" ]; then
         "${compressorCommand}" "${_backupLogPath}"
-        "${compressorCommand}" "${_backupFilePath}"
-        _backupFilePath="${_backupFilePath}${compressorExtension}"
+        if [[ ! -z "${compressArchives}" ]]; then
+          "${compressorCommand}" "${_backupFilePath}"
+          _backupFilePath="${_backupFilePath}${compressorExtension}"
+        fi
     fi
 
     _backupSize=$( du -h "${_backupFilePath}" |awk '{print $1}' )
@@ -262,13 +266,17 @@ if [ -z "${keepBackupWeeks##*[!0-9]*}" ] || [ "${keepBackupWeeks}" -lt "${minBac
     usage "\nERROR: no or incorrect <max_weeks_to_keep_backups> given!"
 fi
 if [ -z "${whatToBackupPath}" ]; then
-    usage "\nERROR: no <source_path> given!"
+    usage "\nERROR: no <what_to_backup_directory> given!"
 fi
 if [ -z "$( mount|grep "$backupDirectoryMount" )" ]; then
     quit 1 "\nFATAL: Backup directory '${backupDirectoryMount}' not mounted!"
 fi
 if [ ! -d "${whatToBackupPath}" ]; then
     quit 1 "\nFATAL: Source directory '${whatToBackupPath}' does not exist!"
+fi
+
+if [[ ! -z "${compressArchives}" ]] && [[ "${compressArchives}" != "compress" ]]; then
+    quit 1 "\nERROR: Incorrect value for argument <compress_archives>!"
 fi
 
 psPattern="bash $0 $1 $2"
