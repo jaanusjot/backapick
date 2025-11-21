@@ -88,12 +88,12 @@ cleanupOldBackups() {
         show "ERROR: Skipping cleanup process. Given max weeks age '${_maxWeeksAge}' is less than '${minBackupMaxWeeksAge}' weeks!"
     else
         show "Removing more than '${_maxDaysAge}' days old incremental backup files from '${_directoryToClean}'."
-        find "${_directoryToClean}" -type f -name "*${incrementalBackupSuffix}" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
+        find "${_directoryToClean}" -type f -name "*${incrementalBackupSuffix}*" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
         find "${_directoryToClean}" -type f -name "*${incrementalBackupLogSuffix}*" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
         find "${_directoryToClean}" -type f -name "${lastIncrementalBackupMarker}" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
 
         show "Removing more than '${_maxDaysAge}' days old full backup files from '${_directoryToClean}'."
-        find "${_directoryToClean}" -type f -name "*${fullBackupSuffix}" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
+        find "${_directoryToClean}" -type f -name "*${fullBackupSuffix}*" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
         find "${_directoryToClean}" -type f -name "*${fullBackupLogSuffix}*" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
         find "${_directoryToClean}" -type f -name "${lastFullBackupMarker}" -daystart -mtime +${_maxDaysAge} -exec sh -c 'echo "$0"; rm -f "$0"' {} \;
 
@@ -244,7 +244,7 @@ backupDirectory() {
     if [ "$( date +%u )" -eq "${fullBackupDayNumber}" ] && [ ! -d "${_currentBackupDirectory}" ]; then
         # Full backup day and full backup hasn't been run yet.
         fullBackup "${_sourceDirectory}" "${_currentBackupDirectory}"
-    elif [ "$( find "${_backupDirectory}/${currentLink}/" -type f -name "*${fullBackupSuffix}" 2>/dev/null |wc -l)" -lt 1 ]; then
+    elif [ "$( find "${_backupDirectory}/${currentLink}/" -type f -name "*${fullBackupSuffix}*" 2>/dev/null |wc -l)" -lt 1 ]; then
         # We have no current link or no full backup file in it. Create a new full backup.
         fullBackup "${_sourceDirectory}" "${_currentBackupDirectory}"
     else
