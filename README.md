@@ -3,40 +3,30 @@ Simple bacup script
 
 ---
 
-# Find empty incremental backups
+# Find empty backup archives and log files
 ```console
-find . -type f -name "*incremental_backup.tar*" -exec bash -c 'if [ "$(tar --list -f {} 2>/dev/null)" = "" ]; then echo {}; fi' \;
-```
-# Remove empty incremental bakups
-```console
-find . -type f -name "*incremental_backup.tar*" -exec bash -c 'if [ "$(tar --list -f {} 2>/dev/null)" = "" ]; then rm {}; echo {}; fi' \;
-```
+find . -type f -name "*_backup.log.bz2" -size -50c -exec bash -c 'if [[ "$(bzcat {})" = "" ]]; then echo {}; fi' \;
+find . -type f -name "*_backup.log" -size 0c -exec bash -c 'if [[ "$(cat {})" = "" ]]; then echo {}; fi' \;
 
----
-
-# Find empty uncompressed log files
-```console
-find . -type f -name "*incremental_backup.log" -exec bash -c 'if [ "$(cat {})" = "" ]; then echo {}; fi' \;
+find . -type f -name "*_backup.tar.bz2" -size -100c -exec bash -c 'if [[ "$(tar --list -f {} 2>/dev/null)" = "" ]]; then echo {}; fi' \;
+find . -type f -name "*_backup.tar" -size -20480c -exec bash -c 'if [[ "$(tar --list -f {} 2>/dev/null)" = "" ]]; then echo {}; fi' \;
 ```
-# Delete empty uncompressed log files
+# Remove empty backup archives and log files
 ```console
-find . -type f -name "*incremental_backup.log" -exec bash -c 'if [ "$(cat {})" = "" ]; then rm {}; echo {}; fi' \;
-```
+find . -type f -name "*_backup.log.bz2" -size -50c -exec bash -c 'if [[ "$(bzcat {})" = "" ]]; then echo {}; rm {}; fi' \;
+find . -type f -name "*_backup.log" -size 0c -exec bash -c 'if [[ "$(cat {})" = "" ]]; then echo {}; rm {}; fi' \;
 
----
+find . -type f -name "*_backup.tar.bz2" -size -100c -exec bash -c 'if [[ "$(tar --list -f {} 2>/dev/null)" = "" ]]; then echo {}; rm {}; fi' \;
+find . -type f -name "*_backup.tar" -size -20480c -exec bash -c 'if [[ "$(tar --list -f {} 2>/dev/null)" = "" ]]; then echo {}; rm {}; fi' \;
 
-# Find empty compressed log files
-```shell
-find . -type f -name "*incremental_backup.log.bz2" -exec bash -c 'if [ "$(bzcat {})" = "" ]; then echo {}; fi' \;
 ```
-# Delete empty compressed log files
+# lbunzip2 all .bz2 files
 ```console
-find . -type f -name "*incremental_backup.log.bz2" -exec bash -c 'if [ "$(bzcat {})" = "" ]; then rm {}; echo {}; fi' \;
+find . -type f -name "*.bz2" -exec bash -c 'echo -n "{}... "; lbunzip2 {}; echo "done"' \;
 ```
 
----
-
-# bunzip2 all .bz2 files
+# lbzip2 all xxx files
 ```console
-find . -type f -name "*.bz2" -exec bash -c 'lbunzip2 {}; echo {}' \;
+find . -type f -name "*_backup.log" -exec bash -c 'echo -n "{}... "; lbzip2 {}; echo "done"' \;
+find . -type f -name "*_backup.tar" -exec bash -c 'echo -n "{}... "; lbzip2 {}; echo "done"' \;
 ```
