@@ -244,6 +244,8 @@ backupDirectory() {
     if [ "$( date +%u )" -eq "${fullBackupDayNumber}" ] && [ ! -d "${_currentBackupDirectory}" ]; then
         # Full backup day and full backup hasn't been run yet.
         fullBackup "${_sourceDirectory}" "${_currentBackupDirectory}"
+    elif [[ ! -f "${_backupDirectory}/${currentLink}/${lastFullBackupMarker}" ]]; then
+      fullBackup "${_sourceDirectory}" "${_currentBackupDirectory}"
     elif [ "$( find "${_backupDirectory}/${currentLink}/" -type f -name "*${fullBackupSuffix}*" 2>/dev/null |wc -l)" -lt 1 ]; then
         # We have no current link or no full backup file in it. Create a new full backup.
         fullBackup "${_sourceDirectory}" "${_currentBackupDirectory}"
