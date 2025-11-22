@@ -200,8 +200,16 @@ createBackup() {
         eval ${command}
     fi
 
+    _minArchiveSize="20480"
+    _compressorAddon=""
+    if [[ ! -z "${compressorCommand}" ]] && [[ ! -z "${compressArchives}" ]]; then
+        _backupFilePath="${_backupFilePath}${compressorExtension}"
+        _compressorAddon="-I ${compressorCommand}"
+        _minArchiveSize="1000"
+    fi
+
     show "Creating backup archive \"${_backupFilePath}\"..."
-    command="nice -n 19 tar -cpv --absolute-names --ignore-failed-read --exclude-tag-all=\"${backupExcludeTag}\" -f \"${_backupFilePath}\" -X \"${backupExcludeFilePath}\" --files-from=\"${_backupListPath}\" > \"${_backupLogPath}\" 2>&1"
+    command="nice -n 19 tar -cpv ${_compressorAddon} --absolute-names --ignore-failed-read --exclude-tag-all=\"${backupExcludeTag}\" -f \"${_backupFilePath}\" -X \"${backupExcludeFilePath}\" --files-from=\"${_backupListPath}\" > \"${_backupLogPath}\" 2>&1"
     eval ${command}
     _tarResult=$?
     rm "${_backupListPath}"
@@ -214,21 +222,20 @@ createBackup() {
         return 2
     fi
 
-    _backupFileContents=$( tar --list -f "${_backupFilePath}")
-    if [ -z "${_backupFileContents}" ]; then
-        show "Empty backup created, removing \"${_backupFilePath}\""
-        rm "${_backupFilePath}"
-        rm "${_backupLogPath}"
+    _archiveFileSize=$( stat -c "%s" "${_backupFilePath}" )
+    if [[ "${_backupFileSize}" -lt "${_minArchiveSize}" ]]; then
+        _backupFileContents=$( tar --list -f "${_backupFilePath}")
+        if [[ -z "${_backupFileContents}" ]]; then
+            show "Empty backup created, removing \"${_backupFilePath}\""
+            rm "${_backupFilePath}"
+            rm "${_backupLogPath}"
 
-        return 1
+            return 1
+        fi
     fi
 
     if [ ! -z "${compressorCommand}" ]; then
         "${compressorCommand}" "${_backupLogPath}"
-        if [[ ! -z "${compressArchives}" ]]; then
-          "${compressorCommand}" "${_backupFilePath}"
-          _backupFilePath="${_backupFilePath}${compressorExtension}"
-        fi
     fi
 
     _backupSize=$( du -h "${_backupFilePath}" |awk '{print $1}' )
